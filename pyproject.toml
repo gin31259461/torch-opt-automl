@@ -1,0 +1,7 @@
+[project]
+name = "torch-opt-automl"
+version = "0.1.0"
+description = "an automl framework using torch and optuna"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["torch==2.6.0", "optuna>=4.2.1"]
