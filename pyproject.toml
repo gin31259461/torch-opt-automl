@@ -1,7 +1,14 @@
 [project]
-name = "torch-opt-automl"
+name = "torch_opt_automl"
 version = "0.1.0"
 description = "an automl framework using torch and optuna"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["torch==2.6.0", "optuna>=4.2.1"]
+dependencies = [
+  "torch==2.6.0",
+  "optuna>=4.2.1",
+  "pytest",
+  "pandas",
+  "numpy",
+  "setuptools",
+]
