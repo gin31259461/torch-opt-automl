@@ -1,3 +1,19 @@
+# Refer to chatgpt
+# 1️⃣ 資料清理（處理缺失值 & 異常值）
+# -> data_cleaning
+
+# 2️⃣ 特徵過濾與轉換（標準化、正規化）
+# 3️⃣ 類別特徵處理（Label Encoding, One-Hot）
+# 4️⃣ 時間序列處理（Lag, 滑動平均）
+# -> data_transformation
+
+# 5️⃣ 特徵構造（數學變換、交互特徵）
+# -> feature_engineering
+
+# 6️⃣ 特徵選擇（L1, 樹模型）
+# -> feature_selection
+
+
 import numpy as np
 import pandas as pd
 
@@ -14,10 +30,10 @@ class FeatureTypes:
 
 def identify_feature_types(
     df: pd.DataFrame,
-    pre_identified: dict[str, FeatureTypes] | None = {},
+    pre_identified: dict[str, str] | None = {},
     time_series_format=time_series_format,
     time_series_ratio=time_series_ratio,
-) -> dict[str, FeatureTypes]:
+) -> dict[str, str]:
     """
     Identifies the type of each feature (column) in a Pandas DataFrame.
 
@@ -73,7 +89,7 @@ def identify_feature_types(
 
 def transform_identified_df_features(
     df: pd.DataFrame,
-    feature_types: dict[str, FeatureTypes],
+    feature_types: dict[str, str],
     time_series_format: str = time_series_format,
 ):
     """Converts DataFrame column types to identified feature types.
@@ -104,7 +120,7 @@ def transform_identified_df_features(
 
 
 def clean_identified_df_and_feature_types(
-    df: pd.DataFrame, feature_types: dict[str, FeatureTypes]
+    df: pd.DataFrame, feature_types: dict[str, str]
 ):
     """Cleans the identified DataFrame and feature_types dictionary by removing columns with a 'none' feature type.
 
@@ -132,7 +148,7 @@ def clean_identified_df_and_feature_types(
 
 def data_cleaning(
     df: pd.DataFrame,
-    feature_types: dict[str, FeatureTypes],
+    feature_types: dict[str, str],
     numerical_missing_strategy: str = "mean",  # 'mean', 'median', or 'drop'
     categorical_missing_strategy: str = "mode",  # 'mode' or 'drop'
     time_series_missing_strategy: str = "ffill",  # 'ffill', 'bfill', or 'drop'
@@ -228,15 +244,106 @@ def data_cleaning(
     return copied_df
 
 
-def data_transformation():
+def data_transformation(
+    df: pd.DataFrame,
+    feature_types: dict[str, str],
+    numerical_transformation: str = "standardization",
+    time_series_encoding: str = "sin-cos",
+) -> pd.DataFrame:
+    """Transforms the input DataFrame based on specified feature types and transformation methods.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        feature_types (dict[str, FeatureTypes]): A dictionary mapping column names to feature types.
+        numerical_transformation (str, optional): Transformation method for numerical features.
+            Options: "standardization", "normalization". Defaults to "standardization".
+        time_series_encoding (str, optional): Encoding method for time series features.
+            Options: "sin-cos". Defaults to "sin-cos".
+
+    Returns:
+        pd.DataFrame: The transformed DataFrame with corresponding column names.
+    """
+    transformed_data = []
+    transformed_col_names = []
+    for col, col_type in feature_types.items():
+        if col_type == FeatureTypes.numerical:
+            if numerical_transformation == "standardization":
+                data = (df[col] - df[col].mean()) / df[col].std()
+                transformed_col_names.append(col)
+            elif numerical_transformation == "normalization":
+                data = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
+                transformed_col_names.append(col)
+            else:
+                raise ValueError(
+                    f"Invalid numerical transformation method: {numerical_transformation}"
+                )
+            transformed_data.append(data.values)
+        elif col_type == FeatureTypes.time_series:
+            if time_series_encoding == "sin-cos":
+                timestamp = pd.to_datetime(df[col])
+                year = timestamp.dt.year
+                month = timestamp.dt.month
+                day = timestamp.dt.day
+                hour = timestamp.dt.hour
+                minute = timestamp.dt.minute
+                second = timestamp.dt.second
+                data = [
+                    np.sin(2 * np.pi * year / year.max()),
+                    np.cos(2 * np.pi * year / year.max()),
+                    np.sin(2 * np.pi * month / 12),
+                    np.cos(2 * np.pi * month / 12),
+                    np.sin(2 * np.pi * day / 31),
+                    np.cos(2 * np.pi * day / 31),
+                    np.sin(2 * np.pi * hour / 24),
+                    np.cos(2 * np.pi * hour / 24),
+                    np.sin(2 * np.pi * minute / 60),
+                    np.cos(2 * np.pi * minute / 60),
+                    np.sin(2 * np.pi * second / 60),
+                    np.cos(2 * np.pi * second / 60),
+                ]
+                time_series_col_names = [
+                    f"{col}_sin_year",
+                    f"{col}_cos_year",
+                    f"{col}_sin_month",
+                    f"{col}_cos_month",
+                    f"{col}_sin_day",
+                    f"{col}_cos_day",
+                    f"{col}_sin_hour",
+                    f"{col}_cos_hour",
+                    f"{col}_sin_minute",
+                    f"{col}_cos_minute",
+                    f"{col}_sin_second",
+                    f"{col}_cos_second",
+                ]
+                transformed_col_names.extend(time_series_col_names)
+            else:
+                raise ValueError(
+                    f"Invalid time series encoding method: {time_series_encoding}"
+                )
+            for item in data:
+                transformed_data.append(item.values)
+        elif col_type == FeatureTypes.categorical:
+            data = pd.get_dummies(df[col], prefix=col)
+            categorical_col_names = data.columns.tolist()
+            transformed_col_names.extend(categorical_col_names)
+            for column in categorical_col_names:
+                transformed_data.append(data[column].values)
+        else:
+            raise ValueError(f"Invalid feature type: {col_type}")
+
+    transformed_df = pd.DataFrame(
+        np.transpose(np.array(transformed_data)),
+        columns=pd.Series(transformed_col_names),
+    )
+
+    return transformed_df
+
+
+def feature_engineering():
     pass
 
 
 def feature_selection():
-    pass
-
-
-def feature_engineering():
     pass
 
 
