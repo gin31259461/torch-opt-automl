@@ -28,6 +28,30 @@ class FeatureTypes:
     none = "none"
 
 
+class CategoricalEncodingMethod:
+    one_hot = "one-hot"
+    frequency = "frequency"
+    target = "target"
+
+
+class NumericalEncodingMethod:
+    standardization = "standardization"
+    normalization = "normalization"
+
+
+class TimeSeriesEncodingMethod:
+    sin_cos = "sin-cos"
+
+
+class CommonMissingStrategy:
+    drop = "drop"
+
+
+class NumericalMissingStrategy(CommonMissingStrategy):
+    mean = "mean"
+    median = "median"
+
+
 def identify_feature_types(
     df: pd.DataFrame,
     pre_identified: dict[str, str] | None = {},
@@ -146,6 +170,7 @@ def clean_identified_df_and_feature_types(
     return new_df, new_feature_types
 
 
+# TODO: automated strategy decision
 def data_cleaning(
     df: pd.DataFrame,
     feature_types: dict[str, str],
@@ -179,11 +204,11 @@ def data_cleaning(
     for col, col_type in feature_types.items():
         if col_type == FeatureTypes.numerical:
             copied_df[col] = copied_df[col].astype("float64")
-            if numerical_missing_strategy == "mean":
+            if numerical_missing_strategy == NumericalMissingStrategy.mean:
                 copied_df[col] = copied_df[col].fillna(copied_df[col].mean())
-            elif numerical_missing_strategy == "median":
+            elif numerical_missing_strategy == NumericalMissingStrategy.median:
                 copied_df[col] = copied_df[col].fillna(copied_df[col].median())
-            elif numerical_missing_strategy == "drop":
+            elif numerical_missing_strategy == NumericalMissingStrategy.drop:
                 copied_df.dropna(subset=[col], inplace=True)
         elif col_type == FeatureTypes.categorical:
             if categorical_missing_strategy == "mode":
@@ -215,14 +240,12 @@ def data_cleaning(
                 # g = (q*n + m - 1) % 1
 
                 # np.percentile
-                # -> method="weibull" means using weibull distribution q
-                # -> default method is linear -> (1 - q)
+                # -> method="weibull" means using weibull distribution -> m = q
+                # -> default method is linear -> m = (1 - q)
 
                 Q1, Q3 = np.percentile(copied_df[col], [25, 75], method="linear")
 
                 IQR = Q3 - Q1
-
-                print(Q1, Q3)
 
                 lower_bound = Q1 - anomaly_detection_threshold * IQR
                 upper_bound = Q3 + anomaly_detection_threshold * IQR
@@ -244,10 +267,15 @@ def data_cleaning(
     return copied_df
 
 
+# TODO: automated transformation decision
+# Categorical: one-hot, frequency, target encoding
+# Numerical: standardization, normalization
+# Time Series: sin-cos encoding
 def data_transformation(
     df: pd.DataFrame,
     feature_types: dict[str, str],
     numerical_transformation: str = "standardization",
+    categorical_transformation: str = "one-hot",
     time_series_encoding: str = "sin-cos",
 ) -> pd.DataFrame:
     """Transforms the input DataFrame based on specified feature types and transformation methods.
@@ -257,6 +285,8 @@ def data_transformation(
         feature_types (dict[str, FeatureTypes]): A dictionary mapping column names to feature types.
         numerical_transformation (str, optional): Transformation method for numerical features.
             Options: "standardization", "normalization". Defaults to "standardization".
+        categorical_transformation (str, optional): Transformation method for categorical features.
+            Options: "one-hot", "frequency", "target". Defaults to "one-hot".
         time_series_encoding (str, optional): Encoding method for time series features.
             Options: "sin-cos". Defaults to "sin-cos".
 
@@ -265,12 +295,13 @@ def data_transformation(
     """
     transformed_data = []
     transformed_col_names = []
+
     for col, col_type in feature_types.items():
         if col_type == FeatureTypes.numerical:
-            if numerical_transformation == "standardization":
+            if numerical_transformation == NumericalEncodingMethod.standardization:
                 data = (df[col] - df[col].mean()) / df[col].std()
                 transformed_col_names.append(col)
-            elif numerical_transformation == "normalization":
+            elif numerical_transformation == NumericalEncodingMethod.normalization:
                 data = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
                 transformed_col_names.append(col)
             else:
@@ -279,7 +310,7 @@ def data_transformation(
                 )
             transformed_data.append(data.values)
         elif col_type == FeatureTypes.time_series:
-            if time_series_encoding == "sin-cos":
+            if time_series_encoding == TimeSeriesEncodingMethod.sin_cos:
                 timestamp = pd.to_datetime(df[col])
                 year = timestamp.dt.year
                 month = timestamp.dt.month
@@ -287,6 +318,7 @@ def data_transformation(
                 hour = timestamp.dt.hour
                 minute = timestamp.dt.minute
                 second = timestamp.dt.second
+
                 data = [
                     np.sin(2 * np.pi * year / year.max()),
                     np.cos(2 * np.pi * year / year.max()),
@@ -301,6 +333,7 @@ def data_transformation(
                     np.sin(2 * np.pi * second / 60),
                     np.cos(2 * np.pi * second / 60),
                 ]
+
                 time_series_col_names = [
                     f"{col}_sin_year",
                     f"{col}_cos_year",
@@ -315,19 +348,29 @@ def data_transformation(
                     f"{col}_sin_second",
                     f"{col}_cos_second",
                 ]
+
                 transformed_col_names.extend(time_series_col_names)
             else:
                 raise ValueError(
                     f"Invalid time series encoding method: {time_series_encoding}"
                 )
+
             for item in data:
                 transformed_data.append(item.values)
+
         elif col_type == FeatureTypes.categorical:
-            data = pd.get_dummies(df[col], prefix=col)
-            categorical_col_names = data.columns.tolist()
-            transformed_col_names.extend(categorical_col_names)
-            for column in categorical_col_names:
-                transformed_data.append(data[column].values)
+            if categorical_transformation == CategoricalEncodingMethod.one_hot:
+                data = pd.get_dummies(df[col], prefix=col)
+
+                categorical_col_names = data.columns.tolist()
+                transformed_col_names.extend(categorical_col_names)
+
+                for column in categorical_col_names:
+                    transformed_data.append(data[column].values)
+            else:
+                raise ValueError(
+                    f"Invalid categorical encoding method: {categorical_transformation}"
+                )
         else:
             raise ValueError(f"Invalid feature type: {col_type}")
 
