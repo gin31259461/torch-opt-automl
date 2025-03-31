@@ -1,21 +1,8 @@
-# Refer to chatgpt
-# 1️⃣ 資料清理（處理缺失值 & 異常值）
-# -> data_cleaning
-
-# 2️⃣ 特徵過濾與轉換（標準化、正規化）
-# 3️⃣ 類別特徵處理（Label Encoding, One-Hot）
-# 4️⃣ 時間序列處理（Lag, 滑動平均）
-# -> data_transformation
-
-# 5️⃣ 特徵構造（數學變換、交互特徵）
-# -> feature_engineering
-
-# 6️⃣ 特徵選擇（L1, 樹模型）
-# -> feature_selection
-
-
 import numpy as np
 import pandas as pd
+
+# import featuretools as ft
+# from woodwork import logical_types
 
 time_series_format = "%Y-%m-%d"
 time_series_ratio = 0.5
@@ -25,6 +12,15 @@ class FeatureTypes:
     time_series = "time_series"
     categorical = "categorical"
     numerical = "numerical"
+
+    # physical type is string, object, or other
+    # maybe this feature is:
+    # Phone number
+    # Email address
+    # URL
+    # Unknown
+    # ...
+
     none = "none"
 
 
@@ -32,6 +28,7 @@ class CategoricalEncodingMethod:
     one_hot = "one-hot"
     frequency = "frequency"
     target = "target"
+    label = "label"
 
 
 class NumericalEncodingMethod:
@@ -268,9 +265,9 @@ def data_cleaning(
 
 
 # TODO: automated transformation decision
-# Categorical: one-hot, frequency, target encoding
+# Categorical: one-hot, label, frequency, target
 # Numerical: standardization, normalization
-# Time Series: sin-cos encoding
+# Time Series: sin-cos, lag, moving average
 def data_transformation(
     df: pd.DataFrame,
     feature_types: dict[str, str],
