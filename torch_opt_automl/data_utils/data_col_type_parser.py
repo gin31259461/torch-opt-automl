@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 
@@ -408,8 +407,11 @@ class DataColTypeParser:
         )
 
         try:
-            pd.to_datetime(sample, errors="coerce", format="mixed")
-            return True
+            parsed_df = pd.to_datetime(sample, errors="coerce", format="mixed")
+
+            if (parsed_df.notna().sum() / len(parsed_df)) > 0.80:
+                return True
+
         except (ValueError, TypeError):
             pass
 
@@ -460,13 +462,15 @@ class DataColTypeParser:
         if unique_ratio <= self.categorical_threshold:
             return True
 
+        # TODO: how to identify integers to categorical?
+
         # Check if values are mostly integers
-        if pd.api.types.is_float_dtype(col_data):
-            # Check if values are effectively integers (no decimal part)
-            if np.mean((col_data.dropna() % 1 == 0)) > 0.95:
-                # If mostly integers with low cardinality, likely categorical
-                if len(col_data.unique()) <= 20:
-                    return True
+        # if pd.api.types.is_float_dtype(col_data):
+        #     # Check if values are effectively integers (no decimal part)
+        #     if np.mean((col_data.dropna() % 1 == 0)) > 0.95:
+        #         # If mostly integers with low cardinality, likely categorical
+        #         if len(col_data.unique()) <= 20:
+        #             return True
 
         # Check for common categorical patterns like 0/1 encoding
         unique_values = set(col_data.unique())
@@ -476,12 +480,12 @@ class DataColTypeParser:
             return True
 
         # Small set of integers is likely categorical
-        if len(unique_values) <= 10 and all(
-            isinstance(x, (int, np.integer))
-            or (isinstance(x, float) and x.is_integer())
-            for x in unique_values
-        ):
-            return True
+        # if len(unique_values) <= 10 and all(
+        #     isinstance(x, (int, np.integer))
+        #     or (isinstance(x, float) and x.is_integer())
+        #     for x in unique_values
+        # ):
+        #     return True
 
         return False
 
