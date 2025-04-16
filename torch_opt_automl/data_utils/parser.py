@@ -243,7 +243,7 @@ class ColumnRecommendations:
         return "\n".join(result)
 
 
-class DataColTypeParser:
+class DataParser:
     """
     A class for identifying column types in a pandas DataFrame.
     Uses ColumnType enum for types:
@@ -383,7 +383,9 @@ class DataColTypeParser:
 
         return False
 
-    def _try_convert_to_datetime(self, column: str) -> bool:
+    def _try_convert_to_datetime(
+        self, column: str, time_series_ratio: float = 0.80
+    ) -> bool:
         """
         Try to convert a column to datetime using various formats.
 
@@ -392,13 +394,17 @@ class DataColTypeParser:
         column : str
             Column name to try to convert
 
+        time_series_ratio : float
+            Define the ratio of time series that should be containing in df
+            Value should be within [0, 1]
+
         Returns:
         --------
         bool
             True if conversion succeeds for most values, False otherwise
         """
         # Skip conversion if more than 20% of values are missing
-        if self.df[column].isna().mean() > 0.2:
+        if self.df[column].isna().mean() > 1 - time_series_ratio:
             return False
 
         # Get a sample of non-null values to check (avoid checking entire large columns)
@@ -409,7 +415,7 @@ class DataColTypeParser:
         try:
             parsed_df = pd.to_datetime(sample, errors="coerce", format="mixed")
 
-            if (parsed_df.notna().sum() / len(parsed_df)) > 0.80:
+            if (parsed_df.notna().sum() / len(parsed_df)) > time_series_ratio:
                 return True
 
         except (ValueError, TypeError):
@@ -428,7 +434,7 @@ class DataColTypeParser:
                         continue
 
                 # If more than 80% of the sample was successfully parsed, consider it a datetime
-                if success_count / len(sample) > 0.8:
+                if success_count / len(sample) > time_series_ratio:
                     return True
             except Exception:
                 continue
@@ -462,7 +468,14 @@ class DataColTypeParser:
         if unique_ratio <= self.categorical_threshold:
             return True
 
-        # TODO: how to identify integers to categorical?
+        # Check for common categorical patterns like 0/1 encoding
+        unique_values = set(col_data.unique())
+
+        # Binary features are likely categorical
+        if unique_values == {0, 1} or unique_values == {0.0, 1.0}:
+            return True
+
+        # TODO: how to identify numerical or categorical properly?
 
         # Check if values are mostly integers
         # if pd.api.types.is_float_dtype(col_data):
@@ -471,13 +484,6 @@ class DataColTypeParser:
         #         # If mostly integers with low cardinality, likely categorical
         #         if len(col_data.unique()) <= 20:
         #             return True
-
-        # Check for common categorical patterns like 0/1 encoding
-        unique_values = set(col_data.unique())
-
-        # Binary features are likely categorical
-        if unique_values == {0, 1} or unique_values == {0.0, 1.0}:
-            return True
 
         # Small set of integers is likely categorical
         # if len(unique_values) <= 10 and all(

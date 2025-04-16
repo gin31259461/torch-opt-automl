@@ -5,12 +5,12 @@ import pandas as pd
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.linear_model import LinearRegression
 
-from .data_col_type_parser import (
+from .parser import (
     ColumnOperation,
     ColumnRecommendation,
     ColumnRecommendations,
     ColumnType,
-    DataColTypeParser,
+    DataParser,
 )
 
 
@@ -37,8 +37,8 @@ class DataCleaner:
         """
         self.original_df = df.copy()
         self.df = df.copy()
-        self.col_type_parser = DataColTypeParser(df)
-        self.column_types = self.col_type_parser.identify_column_types()
+        self.parser = DataParser(df)
+        self.column_types = self.parser.identify_column_types()
         self.operation_history = []
 
     def get_recommendations(self) -> ColumnRecommendations:
@@ -50,7 +50,7 @@ class DataCleaner:
         ColumnRecommendations
             Object containing structured recommendations for each column
         """
-        return self.col_type_parser.recommend_column_operations()
+        return self.parser.recommend_column_operations()
 
     def apply_recommendations(
         self,
@@ -676,7 +676,7 @@ class DataCleaner:
         """
         # Default to all numerical columns if none specified
         if columns is None:
-            columns = self.col_type_parser.get_columns_by_type(ColumnType.NUMERICAL)
+            columns = self.parser.get_columns_by_type(ColumnType.NUMERICAL)
 
         result_df = self.df.copy()
 
@@ -692,13 +692,32 @@ class DataCleaner:
                     method=outlier_detection,
                     factor=factor,
                 )
+
                 result_df = result_df[~outlier_mask]
+
+                self.operation_history.append(
+                    {
+                        "column": column,
+                        "operation": ColumnOperation.REMOVE_OUTLIERS.value,
+                        "reason": "Numerical column outlier strategy",
+                        "success": True,
+                    }
+                )
 
             elif method == "winsorize":
                 result_df[column] = self._winsorize_outliers(
                     pd.Series(result_df[column]),
                     method=outlier_detection,
                     factor=factor,
+                )
+
+                self.operation_history.append(
+                    {
+                        "column": column,
+                        "operation": ColumnOperation.WINSORIZE_OUTLIERS.value,
+                        "reason": "Numerical column outlier strategy",
+                        "success": True,
+                    }
                 )
 
             elif method == "cap":
@@ -713,6 +732,15 @@ class DataCleaner:
                     method="percentile",
                     lower_bound=lower,
                     upper_bound=upper,
+                )
+
+                self.operation_history.append(
+                    {
+                        "column": column,
+                        "operation": ColumnOperation.CAP_OUTLIERS.value,
+                        "reason": "Numerical column outlier strategy",
+                        "success": True,
+                    }
                 )
 
         return pd.DataFrame(result_df)
@@ -774,6 +802,15 @@ class DataCleaner:
                     df[col] = self._impute_forward_fill(pd.Series(df[col]))
                     # Backward fill any remaining NAs at the beginning
                     df[col] = self._impute_backward_fill(pd.Series(df[col]))
+
+                self.operation_history.append(
+                    {
+                        "column": col,
+                        "operation": col_type.value,
+                        "reason": f"Missing value strategy based on {col_type.value}",
+                        "success": True,
+                    }
+                )
 
         else:
             # Apply specific imputation strategy to all columns
@@ -861,17 +898,18 @@ class DataCleaner:
         self.df = self.handle_missing_values(strategy=handle_missing)
 
         # Step 3: Handle outliers in numerical columns
-        numerical_cols = self.col_type_parser.get_columns_by_type(ColumnType.NUMERICAL)
+        numerical_cols = self.parser.get_columns_by_type(ColumnType.NUMERICAL)
         if numerical_cols:
             self.df = self.detect_and_handle_outliers(
-                columns=numerical_cols, method=handle_outliers
+                columns=list(set(numerical_cols) - set(cols_to_drop)),
+                method=handle_outliers,
             )
 
         # Step 4: Apply recommended operations if requested
         if apply_recommendations:
             # Generate fresh recommendations on the partially cleaned data
-            self.col_type_parser = DataColTypeParser(self.df)
-            recommendations = self.col_type_parser.recommend_column_operations()
+            self.parser = DataParser(self.df)
+            recommendations = self.parser.recommend_column_operations()
 
             # Apply recommendations (this updates operation_history)
             self.df = self.apply_recommendations(

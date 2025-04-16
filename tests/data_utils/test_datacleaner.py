@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from torch_opt_automl.data_utils.data_col_type_parser import (
+from torch_opt_automl.data_utils.cleaner import DataCleaner
+from torch_opt_automl.data_utils.parser import (
     ColumnOperation,
     ColumnRecommendation,
     ColumnRecommendations,
 )
-from torch_opt_automl.data_utils.datacleaner import DataCleaner
 
 
 class TestDataCleaner:
@@ -195,8 +195,8 @@ class TestDataCleaner:
         # Check that outliers were handled
         assert result_df["numeric"].max() < 100
 
-        # Check feature engineering operation was not implemented
-        assert len(cleaner.get_operation_history()) == 0
+        # Check if operation history recorded
+        assert len(cleaner.get_operation_history()) == 5
 
     def test_drop_column_recommendation(self, cleaner):
         """Test applying a drop column recommendation."""

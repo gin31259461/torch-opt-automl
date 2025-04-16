@@ -37,5 +37,13 @@ uv sync
 run tests
 
 ```bash
-uv run -m pytest .\tests\test_feature.py -v
+# example
+uv run -m pytest .\tests\data_utils\test_datacleaner.py
+```
+
+run demo
+
+```bash
+# example
+uv run -m tests.data_utils.demo_datacleaner
 ```
