@@ -38,12 +38,12 @@ run tests
 
 ```bash
 # example
-uv run -m pytest .\tests\data_utils\test_datacleaner.py
+uv run -m pytest .\tests\data_utils
 ```
 
 run demo
 
 ```bash
 # example
-uv run -m tests.data_utils.demo_datacleaner
+uv run -m demo.demo_datacleaner
 ```
