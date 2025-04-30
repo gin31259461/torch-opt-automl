@@ -15,6 +15,11 @@ dependencies = [
   "numpy",
   "scikit-learn",
   "umap-learn",
+  "lorem",
+
+  # analysis
+  "matplotlib",
+  "seaborn",
 
   # testing
   "pytest",

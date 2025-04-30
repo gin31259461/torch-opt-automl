@@ -15,6 +15,7 @@ class ColumnType(enum.Enum):
     TIME_SERIES = "time_series"
     NUMERICAL = "numerical"
     CATEGORICAL = "categorical"
+    TEXT = "text"
 
 
 class ColumnOperation(enum.Enum):
@@ -350,6 +351,22 @@ class DataParser:
             if col_types[col] == ColumnType.NUMERICAL:
                 if self._is_numeric_categorical(col):
                     col_types[col] = ColumnType.CATEGORICAL
+
+        # Identify if categorical column is possible text column
+        # TODO: adjustable threshold
+
+        # 0.05 - 0.10
+        cat_threshold = 0.05
+
+        # 15 - 20
+        len_threshold = 15
+
+        for col, col_type in col_types.items():
+            if col_type == ColumnType.CATEGORICAL:
+                unique_ratio = self.df[col].nunique(dropna=True) / len(self.df[col])
+                avg_length = self.df[col].dropna().astype(str).map(len).mean()
+                if unique_ratio >= cat_threshold and avg_length >= len_threshold:
+                    col_types[col] = ColumnType.TEXT
 
         self._col_types = col_types
         return col_types
