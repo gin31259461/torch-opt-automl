@@ -3,8 +3,6 @@ import asyncio
 import aiohttp
 from dotenv import dotenv_values, load_dotenv
 
-from torch_opt_automl.mcp import connect_to_mindsdb_mcp
-
 load_dotenv()
 
 env = dotenv_values()
@@ -79,11 +77,6 @@ async def wait_until_server_ready(url, timeout=5):
 async def main():
     process = await run_chainlit()
     await wait_until_server_ready(chainlit_url)
-
-    try:
-        await asyncio.to_thread(connect_to_mindsdb_mcp)
-    except Exception as e:
-        print_format_output("ERROR", e)
 
     await process.wait()
 

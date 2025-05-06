@@ -37,3 +37,12 @@ dependencies = [
   # output utils
   "wcwidth",
 ]
+
+# also self install torch_opt_automl
+[build-system]
+requires = ["setuptools"]
+source = { editable = "." }
+
+# for other project can install this project
+[tool.setuptools.packages.find]
+where = ["src"]
