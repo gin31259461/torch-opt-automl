@@ -9,6 +9,8 @@ dependencies = [
   # model training
   "torch==2.6.0",
   "optuna>=4.2.1",
+  "chainlit>=2.5.5",
+  "mcp[cli]>=1.6.0",
 
   # math, feature utils
   "pandas",
@@ -27,6 +29,10 @@ dependencies = [
   # package utils
   "setuptools",
   "wheel",
+
+  # other
+  "python-dotenv",
+  "aiohttp",
 
   # output utils
   "wcwidth",

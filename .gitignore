@@ -1,6 +1,12 @@
+# python: cache, package
 .venv
 __pycache__
 .pytest_cache
 **/__pycache__
+
+# input, output
 csv
 output
+
+# chainlit
+.files
