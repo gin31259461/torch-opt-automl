@@ -6,36 +6,42 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
 
-  # model training
+  # === Model === #
   "torch==2.6.0",
   "optuna>=4.2.1",
   "chainlit>=2.5.5",
   "mcp[cli]>=1.6.0",
 
-  # math, feature utils
-  "pandas",
-  "numpy",
+
+  # === Feature === #
   "scikit-learn",
   "umap-learn",
   "lorem",
 
-  # analysis
+  # === Math === #
+  "pandas",
+  "numpy",
+
+  # ===  === #
   "matplotlib",
   "seaborn",
 
-  # testing
+  # === Unit Test === #
   "pytest",
 
-  # package utils
+  # === Package Util === #
   "setuptools",
   "wheel",
 
-  # other
+  # === Env === #
   "python-dotenv",
+
+  # === API === #
   "aiohttp",
 
-  # output utils
+  # === Console === #
   "wcwidth",
+  "rich",
 ]
 
 # also self install torch_opt_automl
@@ -43,6 +49,6 @@ dependencies = [
 requires = ["setuptools"]
 source = { editable = "." }
 
-# for other project can install this project
+# define package entry
 [tool.setuptools.packages.find]
 where = ["src"]

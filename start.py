@@ -1,7 +1,9 @@
 import asyncio
 
-import aiohttp
 from dotenv import dotenv_values, load_dotenv
+
+from torch_opt_automl.console import read_output
+from torch_opt_automl.server import wait_until_server_ready
 
 load_dotenv()
 
@@ -40,38 +42,10 @@ async def run_chainlit():
         stderr=asyncio.subprocess.STDOUT,
     )
 
-    asyncio.create_task(read_output(process.stdout, "Chainlit"))
+    if process.stdout is not None:
+        asyncio.create_task(read_output(process.stdout, "Chainlit"))
 
     return process
-
-
-def print_format_output(name, content):
-    print(f"[{name}]: {content}", flush=True)
-
-
-async def read_output(stream, name):
-    while True:
-        line = await stream.readline()
-        if not line:
-            break
-        print_format_output(name, line.strip().decode("utf-8"))
-
-
-async def wait_until_server_ready(url, timeout=5):
-    start = asyncio.get_event_loop().time()
-    while True:
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as resp:
-                    if resp.status == 200 or resp.status == 404:
-                        return True
-        except Exception:
-            pass
-
-        await asyncio.sleep(0.2)
-
-        if asyncio.get_event_loop().time() - start > timeout:
-            raise RuntimeError("Server not responding")
 
 
 async def main():
